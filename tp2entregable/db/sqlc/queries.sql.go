@@ -7,47 +7,86 @@ package db
 
 import (
 	"context"
-	"time"
 )
 
+const createClient = `-- name: CreateClient :one
+
+INSERT INTO clients (name, email)
+VALUES ($1, $2)
+RETURNING id, name, email
+`
+
+type CreateClientParams struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
+// CLIENTS
+func (q *Queries) CreateClient(ctx context.Context, arg CreateClientParams) (Client, error) {
+	row := q.db.QueryRowContext(ctx, createClient, arg.Name, arg.Email)
+	var i Client
+	err := row.Scan(&i.ID, &i.Name, &i.Email)
+	return i, err
+}
+
 const createWorkout = `-- name: CreateWorkout :one
+
 INSERT INTO workouts (
+    client_id,
+    exercise,
+    sets,
+    repetitions,
+    weight
+)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING
+    id,
+    client_id,
     exercise,
     sets,
     repetitions,
     weight,
-    workout_date
-)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, exercise, sets, repetitions, weight, workout_date
+    created_at
 `
 
 type CreateWorkoutParams struct {
-	Exercise    string    `json:"exercise"`
-	Sets        int32     `json:"sets"`
-	Repetitions int32     `json:"repetitions"`
-	Weight      string    `json:"weight"`
-	WorkoutDate time.Time `json:"workout_date"`
+	ClientID    int32  `json:"client_id"`
+	Exercise    string `json:"exercise"`
+	Sets        int32  `json:"sets"`
+	Repetitions int32  `json:"repetitions"`
+	Weight      string `json:"weight"`
 }
 
+// WORKOUTS
 func (q *Queries) CreateWorkout(ctx context.Context, arg CreateWorkoutParams) (Workout, error) {
 	row := q.db.QueryRowContext(ctx, createWorkout,
+		arg.ClientID,
 		arg.Exercise,
 		arg.Sets,
 		arg.Repetitions,
 		arg.Weight,
-		arg.WorkoutDate,
 	)
 	var i Workout
 	err := row.Scan(
 		&i.ID,
+		&i.ClientID,
 		&i.Exercise,
 		&i.Sets,
 		&i.Repetitions,
 		&i.Weight,
-		&i.WorkoutDate,
+		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const deleteClient = `-- name: DeleteClient :exec
+DELETE FROM clients
+WHERE id = $1
+`
+
+func (q *Queries) DeleteClient(ctx context.Context, id int32) error {
+	_, err := q.db.ExecContext(ctx, deleteClient, id)
+	return err
 }
 
 const deleteWorkout = `-- name: DeleteWorkout :exec
@@ -60,8 +99,28 @@ func (q *Queries) DeleteWorkout(ctx context.Context, id int32) error {
 	return err
 }
 
+const getClient = `-- name: GetClient :one
+SELECT id, name, email
+FROM clients
+WHERE id = $1
+`
+
+func (q *Queries) GetClient(ctx context.Context, id int32) (Client, error) {
+	row := q.db.QueryRowContext(ctx, getClient, id)
+	var i Client
+	err := row.Scan(&i.ID, &i.Name, &i.Email)
+	return i, err
+}
+
 const getWorkout = `-- name: GetWorkout :one
-SELECT id, exercise, sets, repetitions, weight, workout_date
+SELECT
+    id,
+    client_id,
+    exercise,
+    sets,
+    repetitions,
+    weight,
+    created_at
 FROM workouts
 WHERE id = $1
 `
@@ -71,19 +130,56 @@ func (q *Queries) GetWorkout(ctx context.Context, id int32) (Workout, error) {
 	var i Workout
 	err := row.Scan(
 		&i.ID,
+		&i.ClientID,
 		&i.Exercise,
 		&i.Sets,
 		&i.Repetitions,
 		&i.Weight,
-		&i.WorkoutDate,
+		&i.CreatedAt,
 	)
 	return i, err
 }
 
+const listClients = `-- name: ListClients :many
+SELECT id, name, email
+FROM clients
+ORDER BY name
+`
+
+func (q *Queries) ListClients(ctx context.Context) ([]Client, error) {
+	rows, err := q.db.QueryContext(ctx, listClients)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Client
+	for rows.Next() {
+		var i Client
+		if err := rows.Scan(&i.ID, &i.Name, &i.Email); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listWorkouts = `-- name: ListWorkouts :many
-SELECT id, exercise, sets, repetitions, weight, workout_date
+SELECT
+    id,
+    client_id,
+    exercise,
+    sets,
+    repetitions,
+    weight,
+    created_at
 FROM workouts
-ORDER BY workout_date DESC
+ORDER BY created_at DESC
 `
 
 func (q *Queries) ListWorkouts(ctx context.Context) ([]Workout, error) {
@@ -97,11 +193,12 @@ func (q *Queries) ListWorkouts(ctx context.Context) ([]Workout, error) {
 		var i Workout
 		if err := rows.Scan(
 			&i.ID,
+			&i.ClientID,
 			&i.Exercise,
 			&i.Sets,
 			&i.Repetitions,
 			&i.Weight,
-			&i.WorkoutDate,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -116,34 +213,96 @@ func (q *Queries) ListWorkouts(ctx context.Context) ([]Workout, error) {
 	return items, nil
 }
 
+const listWorkoutsByClient = `-- name: ListWorkoutsByClient :many
+SELECT
+    id,
+    client_id,
+    exercise,
+    sets,
+    repetitions,
+    weight,
+    created_at
+FROM workouts
+WHERE client_id = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListWorkoutsByClient(ctx context.Context, clientID int32) ([]Workout, error) {
+	rows, err := q.db.QueryContext(ctx, listWorkoutsByClient, clientID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Workout
+	for rows.Next() {
+		var i Workout
+		if err := rows.Scan(
+			&i.ID,
+			&i.ClientID,
+			&i.Exercise,
+			&i.Sets,
+			&i.Repetitions,
+			&i.Weight,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateClient = `-- name: UpdateClient :exec
+UPDATE clients
+SET name = $2, email = $3
+WHERE id = $1
+`
+
+type UpdateClientParams struct {
+	ID    int32  `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
+func (q *Queries) UpdateClient(ctx context.Context, arg UpdateClientParams) error {
+	_, err := q.db.ExecContext(ctx, updateClient, arg.ID, arg.Name, arg.Email)
+	return err
+}
+
 const updateWorkout = `-- name: UpdateWorkout :exec
 UPDATE workouts
 SET
-    exercise = $2,
-    sets = $3,
-    repetitions = $4,
-    weight = $5,
-    workout_date = $6
+    client_id = $2,
+    exercise = $3,
+    sets = $4,
+    repetitions = $5,
+    weight = $6
 WHERE id = $1
 `
 
 type UpdateWorkoutParams struct {
-	ID          int32     `json:"id"`
-	Exercise    string    `json:"exercise"`
-	Sets        int32     `json:"sets"`
-	Repetitions int32     `json:"repetitions"`
-	Weight      string    `json:"weight"`
-	WorkoutDate time.Time `json:"workout_date"`
+	ID          int32  `json:"id"`
+	ClientID    int32  `json:"client_id"`
+	Exercise    string `json:"exercise"`
+	Sets        int32  `json:"sets"`
+	Repetitions int32  `json:"repetitions"`
+	Weight      string `json:"weight"`
 }
 
 func (q *Queries) UpdateWorkout(ctx context.Context, arg UpdateWorkoutParams) error {
 	_, err := q.db.ExecContext(ctx, updateWorkout,
 		arg.ID,
+		arg.ClientID,
 		arg.Exercise,
 		arg.Sets,
 		arg.Repetitions,
 		arg.Weight,
-		arg.WorkoutDate,
 	)
 	return err
 }

@@ -5,14 +5,21 @@
 package db
 
 import (
-	"time"
+	"database/sql"
 )
 
+type Client struct {
+	ID    int32  `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
 type Workout struct {
-	ID          int32     `json:"id"`
-	Exercise    string    `json:"exercise"`
-	Sets        int32     `json:"sets"`
-	Repetitions int32     `json:"repetitions"`
-	Weight      string    `json:"weight"`
-	WorkoutDate time.Time `json:"workout_date"`
+	ID          int32        `json:"id"`
+	ClientID    int32        `json:"client_id"`
+	Exercise    string       `json:"exercise"`
+	Sets        int32        `json:"sets"`
+	Repetitions int32        `json:"repetitions"`
+	Weight      string       `json:"weight"`
+	CreatedAt   sql.NullTime `json:"created_at"`
 }
