@@ -1,3 +1,3 @@
-module reps-persistencia
+module reps
 
 go 1.22.2
