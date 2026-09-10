@@ -6,7 +6,7 @@ CREATE TABLE clients (
 
 CREATE TABLE workouts (
     id SERIAL PRIMARY KEY,
-    client_id INTEGER NOT NULL REFERENCES clients(id),
+    client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
     exercise VARCHAR(255) NOT NULL,
     sets INTEGER NOT NULL,
     repetitions INTEGER NOT NULL,

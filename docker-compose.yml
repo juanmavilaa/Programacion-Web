@@ -1,0 +1,42 @@
+services:
+  # 1. Base de datos PostgreSQL para Reps
+  database:
+    image: postgres:16-alpine
+    container_name: reps-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: reps
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Monta e inicializa automáticamente las tablas y semillas al crear la base
+      # Monta e inicializa automáticamente el esquema y las semillas
+      - ./db/schema/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./db/seeds/seeds.sql:/docker-entrypoint-initdb.d/02-seeds.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d reps"]
+      interval: 1s
+      timeout: 2s
+      retries: 20
+
+  # 2. Aplicación / Tests en Go
+  # 2. Aplicación y Tests en Go utilizando el Dockerfile
+  web:
+    build: .
+    container_name: reps-app
+    depends_on:
+      - database
+      database:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=host=database port=5432 user=postgres password=postgres dbname=reps sslmode=disable
+    volumes:
+      - .:/app
+    command: go test -v ./...
+
+volumes:
+  postgres_data:
+
