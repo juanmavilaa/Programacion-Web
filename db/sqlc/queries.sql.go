@@ -10,7 +10,6 @@ import (
 )
 
 const createClient = `-- name: CreateClient :one
-
 INSERT INTO clients (name, email)
 VALUES ($1, $2)
 RETURNING id, name, email
@@ -21,7 +20,6 @@ type CreateClientParams struct {
 	Email string `json:"email"`
 }
 
-// CLIENTS
 func (q *Queries) CreateClient(ctx context.Context, arg CreateClientParams) (Client, error) {
 	row := q.db.QueryRowContext(ctx, createClient, arg.Name, arg.Email)
 	var i Client
@@ -30,23 +28,9 @@ func (q *Queries) CreateClient(ctx context.Context, arg CreateClientParams) (Cli
 }
 
 const createWorkout = `-- name: CreateWorkout :one
-
-INSERT INTO workouts (
-    client_id,
-    exercise,
-    sets,
-    repetitions,
-    weight
-)
+INSERT INTO workouts (client_id, exercise, sets, repetitions, weight)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING
-    id,
-    client_id,
-    exercise,
-    sets,
-    repetitions,
-    weight,
-    created_at
+RETURNING id, client_id, exercise, sets, repetitions, weight, created_at
 `
 
 type CreateWorkoutParams struct {
@@ -57,7 +41,6 @@ type CreateWorkoutParams struct {
 	Weight      string `json:"weight"`
 }
 
-// WORKOUTS
 func (q *Queries) CreateWorkout(ctx context.Context, arg CreateWorkoutParams) (Workout, error) {
 	row := q.db.QueryRowContext(ctx, createWorkout,
 		arg.ClientID,
@@ -113,14 +96,7 @@ func (q *Queries) GetClient(ctx context.Context, id int32) (Client, error) {
 }
 
 const getWorkout = `-- name: GetWorkout :one
-SELECT
-    id,
-    client_id,
-    exercise,
-    sets,
-    repetitions,
-    weight,
-    created_at
+SELECT id, client_id, exercise, sets, repetitions, weight, created_at
 FROM workouts
 WHERE id = $1
 `
@@ -170,14 +146,7 @@ func (q *Queries) ListClients(ctx context.Context) ([]Client, error) {
 }
 
 const listWorkouts = `-- name: ListWorkouts :many
-SELECT
-    id,
-    client_id,
-    exercise,
-    sets,
-    repetitions,
-    weight,
-    created_at
+SELECT id, client_id, exercise, sets, repetitions, weight, created_at
 FROM workouts
 ORDER BY created_at DESC
 `
@@ -214,14 +183,7 @@ func (q *Queries) ListWorkouts(ctx context.Context) ([]Workout, error) {
 }
 
 const listWorkoutsByClient = `-- name: ListWorkoutsByClient :many
-SELECT
-    id,
-    client_id,
-    exercise,
-    sets,
-    repetitions,
-    weight,
-    created_at
+SELECT id, client_id, exercise, sets, repetitions, weight, created_at
 FROM workouts
 WHERE client_id = $1
 ORDER BY created_at DESC
@@ -277,8 +239,7 @@ func (q *Queries) UpdateClient(ctx context.Context, arg UpdateClientParams) erro
 
 const updateWorkout = `-- name: UpdateWorkout :exec
 UPDATE workouts
-SET
-    client_id = $2,
+SET client_id = $2,
     exercise = $3,
     sets = $4,
     repetitions = $5,
