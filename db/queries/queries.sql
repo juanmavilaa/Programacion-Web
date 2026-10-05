@@ -8,6 +8,11 @@ SELECT id, name, email
 FROM clients
 WHERE id = $1;
 
+-- name: GetClientByEmail :one
+SELECT id, name, email
+FROM clients
+WHERE email = $1;
+
 -- name: ListClients :many
 SELECT id, name, email
 FROM clients

@@ -89,7 +89,7 @@ func TestPersistenceCRUD(t *testing.T) {
 		t.Errorf("el entrenamiento deberia tener un id")
 	}
 
-	if !workout.CreatedAt.Valid {
+	if workout.CreatedAt.IsZero() {
 		t.Errorf("created_at deberia generarse automaticamente")
 	}
 
