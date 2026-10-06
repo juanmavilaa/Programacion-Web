@@ -95,6 +95,19 @@ func (q *Queries) GetClient(ctx context.Context, id int32) (Client, error) {
 	return i, err
 }
 
+const getClientByEmail = `-- name: GetClientByEmail :one
+SELECT id, name, email
+FROM clients
+WHERE email = $1
+`
+
+func (q *Queries) GetClientByEmail(ctx context.Context, email string) (Client, error) {
+	row := q.db.QueryRowContext(ctx, getClientByEmail, email)
+	var i Client
+	err := row.Scan(&i.ID, &i.Name, &i.Email)
+	return i, err
+}
+
 const getWorkout = `-- name: GetWorkout :one
 SELECT id, client_id, exercise, sets, repetitions, weight, created_at
 FROM workouts

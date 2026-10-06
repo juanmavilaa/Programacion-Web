@@ -28,7 +28,7 @@ Guarda los entrenamientos:
 
 Cada entrenamiento pertenece a un cliente mediante `client_id`.
 
-El campo `created_at` guarda automáticamente la fecha y hora en la que se creó el registro.
+El campo `created_at` guarda automáticamente la fecha y hora en la que se creó el registro. En este TP se le agregó `NOT NULL` para que sqlc lo genere como `time.Time` y en el JSON se vea la fecha directamente.
 
 ## Acceso a datos
 
@@ -44,6 +44,8 @@ Las consultas SQL están definidas en:
 db/queries/queries.sql
 ```
 
+Además del CRUD de cada tabla se agregó `GetClientByEmail`, que la API usa para no permitir emails repetidos.
+
 Se utiliza sqlc para generar el código Go de acceso a datos.
 
 La configuración de sqlc está en:
@@ -58,14 +60,18 @@ El código generado queda en:
 db/sqlc/
 ```
 
+## Creación de las tablas
+
+En `docker-compose.yml` la carpeta `db/schema/` se monta en `/docker-entrypoint-initdb.d` del contenedor de PostgreSQL. Así las tablas se crean solas la primera vez que arranca la base.
+
 ## Tests
 
-Los tests utilizan PostgreSQL levantado con Docker.
+Los tests de persistencia (`persistence_test.go`) utilizan PostgreSQL levantado con Docker.
 
 Para ejecutar todas las tareas necesarias:
 
 ```bash
-./test.sh
+make test
 ```
 
-El script genera el código con sqlc, compila el proyecto, levanta una base PostgreSQL limpia, crea las tablas, ejecuta los tests y elimina el contenedor y el volumen al finalizar.
+El comando genera el código con sqlc, compila, levanta la base y la API, corre las pruebas y al final borra los contenedores y el volumen.
