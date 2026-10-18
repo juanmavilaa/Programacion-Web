@@ -74,4 +74,4 @@ Para ejecutar todas las tareas necesarias:
 make test
 ```
 
-El comando genera el código con sqlc, compila, levanta la base y la API, corre las pruebas y al final borra los contenedores y el volumen.
+El comando genera el código con sqlc, compila, levanta la base, corre los tests de persistencia y al final borra los contenedores y el volumen.

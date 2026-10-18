@@ -2,8 +2,6 @@
 
 Reps es un trackeador de ejercicios de gimnasio que permite registrar clientes y sus entrenamientos.
 
-En este TP se agregó una API REST para manejar los clientes y los entrenamientos. El servidor se conecta a PostgreSQL y usa el código generado por sqlc en el TP2.
-
 ## Requisitos
 
 El proyecto está pensado para correr en Linux. Se necesita:
@@ -22,7 +20,7 @@ Para instalar sqlc:
 go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
 ```
 
-Para instalar Hurl en Ubuntu/Debian:
+Para instalar Hurl en Ubuntu:
 
 ```bash
 VERSION=6.1.1
@@ -30,9 +28,7 @@ curl --location --remote-name https://github.com/Orange-OpenSource/hurl/releases
 sudo apt update && sudo apt install ./hurl_${VERSION}_amd64.deb
 ```
 
-## Ejecutar los tests
-
-El TP3 se encuentra en la branch `tp3`.
+## Probar la API
 
 Después de clonar el repositorio:
 
@@ -43,27 +39,34 @@ git switch tp3
 Desde la raíz del proyecto:
 
 ```bash
-make test
+make test-api
 ```
 
-Este comando:
+Este comando hace todo lo necesario para probar la API:
 
-1. borra contenedores y volúmenes anteriores;
-2. ejecuta `sqlc generate`;
-3. compila el proyecto;
-4. levanta PostgreSQL y la API con Docker Compose;
-5. espera a que la API esté disponible;
-6. ejecuta las pruebas de la API (`requests.hurl`);
-7. ejecuta los tests de persistencia con `go test`;
-8. borra los contenedores y el volumen al finalizar.
+1. ejecuta `sqlc generate`;
+2. compila el proyecto;
+3. borra contenedores y volúmenes anteriores;
+4. levanta PostgreSQL y espera a que la base esté lista;
+5. levanta la aplicación y espera a que responda;
+6. prueba cada uno de los endpoints con Hurl (`requests.hurl`);
+7. borra los contenedores y el volumen al finalizar.
+
+Si alguna prueba falla, igual se borran los contenedores y el comando termina con error.
+
+Los tests de persistencia del TP2 se siguen pudiendo correr con:
+
+```bash
+make test
+```
 
 ## Levantar el servidor
 
 ```bash
-make up
+make api
 ```
 
-La API queda en `http://localhost:8080` y la página inicial del TP1 sigue estando en la raíz.
+Levanta la base y la aplicación en segundo plano. La API queda en `http://localhost:8080` y la página inicial del TP1 sigue estando en la raíz.
 
 Para verlo con los logs en la terminal se puede usar `make run` (se corta con Ctrl+C).
 
@@ -75,7 +78,7 @@ make down
 
 Las tablas se crean solas la primera vez que arranca la base, a partir de `db/schema/schema.sql`.
 
-## Probar la API
+## Probar a mano
 
 Con el servidor recién levantado:
 
@@ -83,7 +86,7 @@ Con el servidor recién levantado:
 hurl --test requests.hurl
 ```
 
-Las pruebas usan ids fijos (el primer cliente y el primer entrenamiento tienen id 1), por eso hay que correrlas con la base vacía. Si se quieren correr de nuevo, hacer `make down` y `make up` antes.
+Las pruebas usan ids fijos (el primer cliente y el primer entrenamiento tienen id 1), por eso hay que correrlas con la base vacía. Si se quieren correr de nuevo, hacer `make down` y `make api` antes.
 
 También se puede probar con curl, por ejemplo:
 
@@ -122,6 +125,7 @@ La documentación de la API está en:
 
 ```text
 docs/api.md
+docs/openapi.yaml
 ```
 
 La documentación de persistencia está en:

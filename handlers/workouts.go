@@ -1,4 +1,4 @@
-package main
+package handlers
 
 import (
 	"database/sql"
@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	db "reps/db/sqlc"
 )
@@ -39,37 +40,54 @@ func validarWorkout(clientID int32, exercise string, sets, repetitions int32, we
 }
 
 func (h *WorkoutHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path == "/workouts" {
-		switch r.Method {
-		case http.MethodGet:
-			h.list(w, r)
-		case http.MethodPost:
-			h.create(w, r)
-		default:
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-		return
+	switch r.URL.Path {
+	case "/workouts":
+		h.workoutsHandler(w, r)
+	default:
+		h.workoutHandler(w, r)
 	}
+}
 
-	id, err := idFromPath(r.URL.Path)
-	if err != nil {
-		http.Error(w, "id invalido", http.StatusBadRequest)
-		return
-	}
-
+// Manejador para /workouts
+func (h *WorkoutHandler) workoutsHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		h.get(w, r, id)
-	case http.MethodPut:
-		h.update(w, r, id)
-	case http.MethodDelete:
-		h.delete(w, r, id)
+		h.getWorkouts(w, r)
+	case http.MethodPost:
+		h.createWorkout(w, r)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
-func (h *WorkoutHandler) list(w http.ResponseWriter, r *http.Request) {
+// Manejador para /workouts/{id}
+func (h *WorkoutHandler) workoutHandler(w http.ResponseWriter, r *http.Request) {
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) != 3 {
+		http.Error(w, "Invalid URL", http.StatusBadRequest)
+		return
+	}
+
+	id, err := strconv.Atoi(parts[2])
+	if err != nil {
+		http.Error(w, "id de entrenamiento invalido", http.StatusBadRequest)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		h.getWorkout(w, r, int32(id))
+	case http.MethodPut:
+		h.updateWorkout(w, r, int32(id))
+	case http.MethodDelete:
+		h.deleteWorkout(w, r, int32(id))
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// GET /workouts - Listar todos los entrenamientos
+func (h *WorkoutHandler) getWorkouts(w http.ResponseWriter, r *http.Request) {
 	workouts, err := h.queries.ListWorkouts(r.Context())
 	if err != nil {
 		http.Error(w, "error al listar los entrenamientos", http.StatusInternalServerError)
@@ -80,13 +98,16 @@ func (h *WorkoutHandler) list(w http.ResponseWriter, r *http.Request) {
 		workouts = []db.Workout{}
 	}
 
-	writeJSON(w, http.StatusOK, workouts)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(workouts)
 }
 
-func (h *WorkoutHandler) create(w http.ResponseWriter, r *http.Request) {
+// POST /workouts - Crear nuevo entrenamiento
+func (h *WorkoutHandler) createWorkout(w http.ResponseWriter, r *http.Request) {
 	var params db.CreateWorkoutParams
-	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
-		http.Error(w, "JSON invalido", http.StatusBadRequest)
+	err := json.NewDecoder(r.Body).Decode(&params)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -95,8 +116,8 @@ func (h *WorkoutHandler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := h.queries.GetClient(r.Context(), params.ClientID)
-	if errors.Is(err, sql.ErrNoRows) {
+	_, err = h.queries.GetClient(r.Context(), params.ClientID)
+	if err == sql.ErrNoRows {
 		http.Error(w, "no existe el cliente", http.StatusBadRequest)
 		return
 	}
@@ -111,12 +132,15 @@ func (h *WorkoutHandler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, workout)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(workout)
 }
 
-func (h *WorkoutHandler) get(w http.ResponseWriter, r *http.Request, id int32) {
+// GET /workouts/{id} - Obtener entrenamiento especifico
+func (h *WorkoutHandler) getWorkout(w http.ResponseWriter, r *http.Request, id int32) {
 	workout, err := h.queries.GetWorkout(r.Context(), id)
-	if errors.Is(err, sql.ErrNoRows) {
+	if err == sql.ErrNoRows {
 		http.Error(w, "entrenamiento no encontrado", http.StatusNotFound)
 		return
 	}
@@ -125,13 +149,16 @@ func (h *WorkoutHandler) get(w http.ResponseWriter, r *http.Request, id int32) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, workout)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(workout)
 }
 
-func (h *WorkoutHandler) update(w http.ResponseWriter, r *http.Request, id int32) {
+// PUT /workouts/{id} - Actualizar entrenamiento
+func (h *WorkoutHandler) updateWorkout(w http.ResponseWriter, r *http.Request, id int32) {
 	var params db.UpdateWorkoutParams
-	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
-		http.Error(w, "JSON invalido", http.StatusBadRequest)
+	err := json.NewDecoder(r.Body).Decode(&params)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -140,8 +167,8 @@ func (h *WorkoutHandler) update(w http.ResponseWriter, r *http.Request, id int32
 		return
 	}
 
-	_, err := h.queries.GetWorkout(r.Context(), id)
-	if errors.Is(err, sql.ErrNoRows) {
+	_, err = h.queries.GetWorkout(r.Context(), id)
+	if err == sql.ErrNoRows {
 		http.Error(w, "entrenamiento no encontrado", http.StatusNotFound)
 		return
 	}
@@ -151,7 +178,7 @@ func (h *WorkoutHandler) update(w http.ResponseWriter, r *http.Request, id int32
 	}
 
 	_, err = h.queries.GetClient(r.Context(), params.ClientID)
-	if errors.Is(err, sql.ErrNoRows) {
+	if err == sql.ErrNoRows {
 		http.Error(w, "no existe el cliente", http.StatusBadRequest)
 		return
 	}
@@ -160,6 +187,7 @@ func (h *WorkoutHandler) update(w http.ResponseWriter, r *http.Request, id int32
 		return
 	}
 
+	// Mantener el ID original
 	params.ID = id
 	if err := h.queries.UpdateWorkout(r.Context(), params); err != nil {
 		http.Error(w, "error al actualizar el entrenamiento", http.StatusInternalServerError)
@@ -172,12 +200,14 @@ func (h *WorkoutHandler) update(w http.ResponseWriter, r *http.Request, id int32
 		return
 	}
 
-	writeJSON(w, http.StatusOK, workout)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(workout)
 }
 
-func (h *WorkoutHandler) delete(w http.ResponseWriter, r *http.Request, id int32) {
+// DELETE /workouts/{id} - Eliminar entrenamiento
+func (h *WorkoutHandler) deleteWorkout(w http.ResponseWriter, r *http.Request, id int32) {
 	_, err := h.queries.GetWorkout(r.Context(), id)
-	if errors.Is(err, sql.ErrNoRows) {
+	if err == sql.ErrNoRows {
 		http.Error(w, "entrenamiento no encontrado", http.StatusNotFound)
 		return
 	}

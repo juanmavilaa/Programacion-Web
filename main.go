@@ -2,15 +2,13 @@ package main
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"strconv"
-	"strings"
 
 	db "reps/db/sqlc"
+	"reps/handlers"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -25,8 +23,8 @@ func main() {
 
 	queries := db.New(conn)
 
-	clientHandler := NewClientHandler(queries)
-	workoutHandler := NewWorkoutHandler(queries)
+	clientHandler := handlers.NewClientHandler(queries)
+	workoutHandler := handlers.NewWorkoutHandler(queries)
 
 	http.Handle("/clients", loggingMiddleware(clientHandler))
 	http.Handle("/clients/", loggingMiddleware(clientHandler))
@@ -44,7 +42,7 @@ func main() {
 func ConnectDB() (*sql.DB, error) {
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
-		return nil, fmt.Errorf("falta la variable DATABASE_URL")
+		return nil, fmt.Errorf("DATABASE_URL is not set")
 	}
 
 	conn, err := sql.Open("pgx", dsn)
@@ -65,25 +63,4 @@ func loggingMiddleware(next http.Handler) http.Handler {
 		log.Printf("Request: %s %s", r.Method, r.URL.Path)
 		next.ServeHTTP(w, r)
 	})
-}
-
-// saca el id de urls como /clients/5
-func idFromPath(path string) (int32, error) {
-	parts := strings.Split(path, "/")
-	if len(parts) != 3 {
-		return 0, fmt.Errorf("url invalida")
-	}
-
-	id, err := strconv.Atoi(parts[2])
-	if err != nil {
-		return 0, err
-	}
-
-	return int32(id), nil
-}
-
-func writeJSON(w http.ResponseWriter, status int, data any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
 }

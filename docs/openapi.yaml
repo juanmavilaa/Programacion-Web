@@ -1,0 +1,219 @@
+openapi: 3.0.0
+info:
+  title: Reps API
+  version: 1.0.0
+  description: API para manejar los clientes del gimnasio y sus entrenamientos.
+servers:
+  - url: http://localhost:8080
+paths:
+  /clients:
+    get:
+      summary: Listar todos los clientes
+      responses:
+        "200":
+          description: Lista de clientes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Client"
+    post:
+      summary: Crear un cliente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientInput"
+      responses:
+        "201":
+          description: Cliente creado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+        "400":
+          description: Datos invalidos
+        "409":
+          description: Ya hay un cliente con ese email
+  /clients/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: Obtener un cliente
+      responses:
+        "200":
+          description: El cliente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+        "400":
+          description: Id invalido
+        "404":
+          description: El cliente no existe
+    put:
+      summary: Actualizar un cliente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientInput"
+      responses:
+        "200":
+          description: Cliente actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+        "400":
+          description: Datos o id invalidos
+        "404":
+          description: El cliente no existe
+        "409":
+          description: Ya hay otro cliente con ese email
+    delete:
+      summary: Eliminar un cliente
+      responses:
+        "204":
+          description: Cliente eliminado
+        "400":
+          description: Id invalido
+        "404":
+          description: El cliente no existe
+        "409":
+          description: El cliente tiene entrenamientos cargados
+  /workouts:
+    get:
+      summary: Listar todos los entrenamientos
+      responses:
+        "200":
+          description: Lista de entrenamientos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Workout"
+    post:
+      summary: Crear un entrenamiento
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkoutInput"
+      responses:
+        "201":
+          description: Entrenamiento creado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workout"
+        "400":
+          description: Datos invalidos o el cliente no existe
+  /workouts/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: Obtener un entrenamiento
+      responses:
+        "200":
+          description: El entrenamiento
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workout"
+        "400":
+          description: Id invalido
+        "404":
+          description: El entrenamiento no existe
+    put:
+      summary: Actualizar un entrenamiento
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkoutInput"
+      responses:
+        "200":
+          description: Entrenamiento actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workout"
+        "400":
+          description: Datos invalidos o el cliente no existe
+        "404":
+          description: El entrenamiento no existe
+    delete:
+      summary: Eliminar un entrenamiento
+      responses:
+        "204":
+          description: Entrenamiento eliminado
+        "400":
+          description: Id invalido
+        "404":
+          description: El entrenamiento no existe
+components:
+  schemas:
+    ClientInput:
+      type: object
+      required: [name, email]
+      properties:
+        name:
+          type: string
+          example: Juan Perez
+        email:
+          type: string
+          example: juan@reps.com
+    Client:
+      allOf:
+        - type: object
+          properties:
+            id:
+              type: integer
+              example: 1
+        - $ref: "#/components/schemas/ClientInput"
+    WorkoutInput:
+      type: object
+      required: [client_id, exercise, sets, repetitions, weight]
+      properties:
+        client_id:
+          type: integer
+          example: 1
+        exercise:
+          type: string
+          example: Press banca
+        sets:
+          type: integer
+          example: 4
+        repetitions:
+          type: integer
+          example: 8
+        weight:
+          type: string
+          description: Se manda como texto porque en la base es NUMERIC(6,2)
+          example: "80.00"
+    Workout:
+      allOf:
+        - type: object
+          properties:
+            id:
+              type: integer
+              example: 1
+            created_at:
+              type: string
+              format: date-time
+        - $ref: "#/components/schemas/WorkoutInput"

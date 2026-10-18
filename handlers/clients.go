@@ -1,4 +1,4 @@
-package main
+package handlers
 
 import (
 	"database/sql"
@@ -6,6 +6,8 @@ import (
 	"errors"
 	"net/http"
 	"regexp"
+	"strconv"
+	"strings"
 
 	db "reps/db/sqlc"
 )
@@ -22,7 +24,7 @@ func ValidateEmail(email string) error {
 	re := regexp.MustCompile(
 		`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 	if !re.MatchString(email) {
-		return errors.New("el email no es valido")
+		return errors.New("formato de email inválido")
 	}
 	return nil
 }
@@ -35,55 +37,75 @@ func validarCliente(name, email string) error {
 }
 
 func (h *ClientHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path == "/clients" {
-		switch r.Method {
-		case http.MethodGet:
-			h.list(w, r)
-		case http.MethodPost:
-			h.create(w, r)
-		default:
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-		return
+	switch r.URL.Path {
+	case "/clients":
+		h.clientsHandler(w, r)
+	default:
+		h.clientHandler(w, r)
 	}
+}
 
-	id, err := idFromPath(r.URL.Path)
-	if err != nil {
-		http.Error(w, "id invalido", http.StatusBadRequest)
-		return
-	}
-
+// Manejador para /clients
+func (h *ClientHandler) clientsHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		h.get(w, r, id)
-	case http.MethodPut:
-		h.update(w, r, id)
-	case http.MethodDelete:
-		h.delete(w, r, id)
+		h.getClients(w, r)
+	case http.MethodPost:
+		h.createClient(w, r)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
-func (h *ClientHandler) list(w http.ResponseWriter, r *http.Request) {
+// Manejador para /clients/{id}
+func (h *ClientHandler) clientHandler(w http.ResponseWriter, r *http.Request) {
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) != 3 {
+		http.Error(w, "Invalid URL", http.StatusBadRequest)
+		return
+	}
+
+	id, err := strconv.Atoi(parts[2])
+	if err != nil {
+		http.Error(w, "id de cliente invalido", http.StatusBadRequest)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		h.getClient(w, r, int32(id))
+	case http.MethodPut:
+		h.updateClient(w, r, int32(id))
+	case http.MethodDelete:
+		h.deleteClient(w, r, int32(id))
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// GET /clients - Listar todos los clientes
+func (h *ClientHandler) getClients(w http.ResponseWriter, r *http.Request) {
 	clients, err := h.queries.ListClients(r.Context())
 	if err != nil {
 		http.Error(w, "error al listar los clientes", http.StatusInternalServerError)
 		return
 	}
 
-	// sin esto si no hay clientes devuelve null
+	// si no hay clientes sqlc devuelve nil y el json queda null
 	if clients == nil {
 		clients = []db.Client{}
 	}
 
-	writeJSON(w, http.StatusOK, clients)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(clients)
 }
 
-func (h *ClientHandler) create(w http.ResponseWriter, r *http.Request) {
+// POST /clients - Crear nuevo cliente
+func (h *ClientHandler) createClient(w http.ResponseWriter, r *http.Request) {
 	var params db.CreateClientParams
-	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
-		http.Error(w, "JSON invalido", http.StatusBadRequest)
+	err := json.NewDecoder(r.Body).Decode(&params)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -92,12 +114,12 @@ func (h *ClientHandler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := h.queries.GetClientByEmail(r.Context(), params.Email)
+	_, err = h.queries.GetClientByEmail(r.Context(), params.Email)
 	if err == nil {
 		http.Error(w, "ya hay un cliente con ese email", http.StatusConflict)
 		return
 	}
-	if !errors.Is(err, sql.ErrNoRows) {
+	if err != sql.ErrNoRows {
 		http.Error(w, "error al crear el cliente", http.StatusInternalServerError)
 		return
 	}
@@ -108,12 +130,15 @@ func (h *ClientHandler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, client)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(client)
 }
 
-func (h *ClientHandler) get(w http.ResponseWriter, r *http.Request, id int32) {
+// GET /clients/{id} - Obtener cliente especifico
+func (h *ClientHandler) getClient(w http.ResponseWriter, r *http.Request, id int32) {
 	client, err := h.queries.GetClient(r.Context(), id)
-	if errors.Is(err, sql.ErrNoRows) {
+	if err == sql.ErrNoRows {
 		http.Error(w, "cliente no encontrado", http.StatusNotFound)
 		return
 	}
@@ -122,13 +147,16 @@ func (h *ClientHandler) get(w http.ResponseWriter, r *http.Request, id int32) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, client)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(client)
 }
 
-func (h *ClientHandler) update(w http.ResponseWriter, r *http.Request, id int32) {
+// PUT /clients/{id} - Actualizar cliente
+func (h *ClientHandler) updateClient(w http.ResponseWriter, r *http.Request, id int32) {
 	var params db.UpdateClientParams
-	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
-		http.Error(w, "JSON invalido", http.StatusBadRequest)
+	err := json.NewDecoder(r.Body).Decode(&params)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -137,8 +165,8 @@ func (h *ClientHandler) update(w http.ResponseWriter, r *http.Request, id int32)
 		return
 	}
 
-	_, err := h.queries.GetClient(r.Context(), id)
-	if errors.Is(err, sql.ErrNoRows) {
+	_, err = h.queries.GetClient(r.Context(), id)
+	if err == sql.ErrNoRows {
 		http.Error(w, "cliente no encontrado", http.StatusNotFound)
 		return
 	}
@@ -153,11 +181,12 @@ func (h *ClientHandler) update(w http.ResponseWriter, r *http.Request, id int32)
 		http.Error(w, "ya hay un cliente con ese email", http.StatusConflict)
 		return
 	}
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	if err != nil && err != sql.ErrNoRows {
 		http.Error(w, "error al actualizar el cliente", http.StatusInternalServerError)
 		return
 	}
 
+	// Mantener el ID original
 	params.ID = id
 	if err := h.queries.UpdateClient(r.Context(), params); err != nil {
 		http.Error(w, "error al actualizar el cliente", http.StatusInternalServerError)
@@ -170,12 +199,14 @@ func (h *ClientHandler) update(w http.ResponseWriter, r *http.Request, id int32)
 		return
 	}
 
-	writeJSON(w, http.StatusOK, client)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(client)
 }
 
-func (h *ClientHandler) delete(w http.ResponseWriter, r *http.Request, id int32) {
+// DELETE /clients/{id} - Eliminar cliente
+func (h *ClientHandler) deleteClient(w http.ResponseWriter, r *http.Request, id int32) {
 	_, err := h.queries.GetClient(r.Context(), id)
-	if errors.Is(err, sql.ErrNoRows) {
+	if err == sql.ErrNoRows {
 		http.Error(w, "cliente no encontrado", http.StatusNotFound)
 		return
 	}

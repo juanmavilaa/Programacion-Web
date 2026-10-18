@@ -73,10 +73,24 @@ Validaciones:
 
 ## Cómo está hecho
 
-En `main.go` se abre la conexión con la base usando la variable de entorno `DATABASE_URL` y se crea el repositorio de sqlc con `db.New`. Ese repositorio se le pasa a `ClientHandler` y a `WorkoutHandler` (en `clients.go` y `workouts.go`).
+En `main.go` se abre la conexión con la base usando la variable de entorno `DATABASE_URL` y se crea el repositorio de sqlc con `db.New`. Ese repositorio se le pasa a `ClientHandler` y a `WorkoutHandler`, que están en la carpeta `handlers/`.
 
 Cada handler revisa la ruta: si es `/clients` atiende GET y POST, y si es `/clients/{id}` saca el id de la URL y atiende GET, PUT y DELETE. Lo mismo para `/workouts`.
 
 Para los controles que dependen de la base (email repetido, cliente que no existe, cliente con entrenamientos) se usan las consultas `GetClientByEmail`, `GetClient` y `ListWorkoutsByClient` antes de guardar o borrar.
 
 Además, un middleware escribe en el log cada request que llega.
+
+## OpenAPI
+
+La misma información está en formato OpenAPI en `docs/openapi.yaml`. Se puede abrir en https://editor.swagger.io para verla con la interfaz de Swagger.
+
+## Pruebas
+
+Las pruebas de todos los endpoints están en `requests.hurl`. Se corren con:
+
+```bash
+make test-api
+```
+
+El comando levanta una base vacía y la API con Docker, ejecuta las pruebas con Hurl y después borra los contenedores. Las pruebas usan ids fijos, por eso necesitan la base vacía.

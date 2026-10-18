@@ -1,15 +1,16 @@
-# Pruebas de la API de Reps
-# Correr con la base vacia (los ids arrancan en 1): hurl --test requests.hurl
+# requests.hurl
+# Se corre con make test-api. Necesita la base vacia porque los ids arrancan en 1
 
 
 # --- Clientes ---
 
+# Obtener todos los clientes (todavia no hay ninguno)
 GET http://localhost:8080/clients
 HTTP 200
 [Asserts]
 header "Content-Type" == "application/json"
 
-# crear cliente
+# Crear un nuevo cliente
 POST http://localhost:8080/clients
 Content-Type: application/json
 {
@@ -49,25 +50,29 @@ Content-Type: application/json
 }
 HTTP 409
 
+# Obtener todos los clientes
 GET http://localhost:8080/clients
 HTTP 200
 [Asserts]
 jsonpath "$[0].id" == 1
 jsonpath "$[0].name" == "Juan Perez"
 
+# Obtener el cliente con id 1
 GET http://localhost:8080/clients/1
 HTTP 200
 [Asserts]
 jsonpath "$.name" == "Juan Perez"
 jsonpath "$.email" == "juan@reps.com"
 
+# id que no existe
 GET http://localhost:8080/clients/999
 HTTP 404
 
+# id que no es un numero
 GET http://localhost:8080/clients/abc
 HTTP 400
 
-# actualizar cliente
+# Actualizar el cliente con id 1
 PUT http://localhost:8080/clients/1
 Content-Type: application/json
 {
@@ -80,6 +85,7 @@ jsonpath "$.id" == 1
 jsonpath "$.name" == "Juan Carlos Perez"
 jsonpath "$.email" == "jcperez@reps.com"
 
+# actualizar sin nombre
 PUT http://localhost:8080/clients/1
 Content-Type: application/json
 {
@@ -88,6 +94,7 @@ Content-Type: application/json
 }
 HTTP 400
 
+# actualizar un cliente que no existe
 PUT http://localhost:8080/clients/999
 Content-Type: application/json
 {
@@ -99,7 +106,7 @@ HTTP 404
 
 # --- Entrenamientos ---
 
-# crear entrenamiento para el cliente 1
+# Crear un nuevo entrenamiento para el cliente 1
 POST http://localhost:8080/workouts
 Content-Type: application/json
 {
@@ -154,6 +161,7 @@ Content-Type: application/json
 }
 HTTP 400
 
+# Obtener todos los entrenamientos
 GET http://localhost:8080/workouts
 HTTP 200
 [Asserts]
@@ -161,13 +169,14 @@ header "Content-Type" == "application/json"
 jsonpath "$[0].id" == 1
 jsonpath "$[0].exercise" == "Press banca"
 
+# Obtener el entrenamiento con id 1
 GET http://localhost:8080/workouts/1
 HTTP 200
 [Asserts]
 jsonpath "$.exercise" == "Press banca"
 jsonpath "$.client_id" == 1
 
-# actualizar entrenamiento
+# Actualizar el entrenamiento con id 1
 PUT http://localhost:8080/workouts/1
 Content-Type: application/json
 {
@@ -188,23 +197,28 @@ jsonpath "$.weight" == "70.50"
 DELETE http://localhost:8080/clients/1
 HTTP 409
 
+# Eliminar el entrenamiento con id 1
 DELETE http://localhost:8080/workouts/1
 HTTP 204
 
+# ya no existe
 GET http://localhost:8080/workouts/1
 HTTP 404
 
 
 # --- Borrado del cliente ---
 
+# Eliminar el cliente con id 1 (ya no tiene entrenamientos)
 DELETE http://localhost:8080/clients/1
 HTTP 204
 
 GET http://localhost:8080/clients/1
 HTTP 404
 
+# borrar dos veces el mismo cliente
 DELETE http://localhost:8080/clients/1
 HTTP 404
 
+# metodo que no existe para /clients
 PATCH http://localhost:8080/clients
 HTTP 405
