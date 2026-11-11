@@ -1,0 +1,14 @@
+tmp/
+/reps
+*.exe
+*.test
+*.out
+.env
+.env.*
+*.db
+*.sqlite
+*.sqlite3
+*.log
+.vscode/
+.idea/
+.DS_Store

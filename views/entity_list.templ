@@ -1,0 +1,78 @@
+package views
+
+import (
+	db "reps/db/sqlc"
+	"strconv"
+)
+
+templ ClientList(clients []db.Client) {
+	if len(clients) == 0 {
+		<p>Todavía no hay clientes cargados.</p>
+	} else {
+		<div class="overflow-auto">
+			<table>
+				<thead>
+					<tr>
+						<th>Nombre</th>
+						<th>Email</th>
+						<th></th>
+					</tr>
+				</thead>
+				<tbody>
+					for _, client := range clients {
+						<tr>
+							<td>{ client.Name }</td>
+							<td>{ client.Email }</td>
+							<td>
+								<form method="post" action="/clients/delete">
+									<input type="hidden" name="id" value={ strconv.Itoa(int(client.ID)) }/>
+									<button type="submit" class="secondary">Eliminar</button>
+								</form>
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	}
+}
+
+templ WorkoutList(workouts []db.Workout, clients []db.Client) {
+	if len(workouts) == 0 {
+		<p>Todavía no hay entrenamientos cargados.</p>
+	} else {
+		<div class="overflow-auto">
+			<table>
+				<thead>
+					<tr>
+						<th>Cliente</th>
+						<th>Ejercicio</th>
+						<th>Series</th>
+						<th>Rep.</th>
+						<th>Peso</th>
+						<th>Fecha</th>
+						<th></th>
+					</tr>
+				</thead>
+				<tbody>
+					for _, workout := range workouts {
+						<tr>
+							<td>{ clientName(clients, workout.ClientID) }</td>
+							<td>{ workout.Exercise }</td>
+							<td>{ strconv.Itoa(int(workout.Sets)) }</td>
+							<td>{ strconv.Itoa(int(workout.Repetitions)) }</td>
+							<td>{ workout.Weight } kg</td>
+							<td>{ workout.CreatedAt.Format("02/01/2006") }</td>
+							<td>
+								<form method="post" action="/workouts/delete">
+									<input type="hidden" name="id" value={ strconv.Itoa(int(workout.ID)) }/>
+									<button type="submit" class="secondary">Eliminar</button>
+								</form>
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	}
+}
