@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	db "reps/db/sqlc"
+	"reps/views"
 )
 
 type WorkoutHandler struct {
@@ -19,7 +20,7 @@ func NewWorkoutHandler(q *db.Queries) *WorkoutHandler {
 	return &WorkoutHandler{queries: q}
 }
 
-// devuelve 0 si el texto no es un numero o no entra en un int32 (lo rechaza validarWorkout)
+// devuelve 0 si el texto no es un numero valido
 func numero(s string) int32 {
 	n, err := strconv.ParseInt(s, 10, 32)
 	if err != nil {
@@ -49,22 +50,35 @@ func validarWorkout(clientID int32, exercise string, sets, repetitions int32, we
 }
 
 func (h *WorkoutHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	if r.URL.Path == "/workouts" {
+		switch r.Method {
+		case http.MethodPost:
+			h.Create(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
 		return
 	}
 
-	switch r.URL.Path {
-	case "/workouts":
-		h.Create(w, r)
-	case "/workouts/delete":
-		h.Delete(w, r)
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) != 3 {
+		http.Error(w, "url invalida", http.StatusBadRequest)
+		return
+	}
+	id, err := strconv.ParseInt(parts[2], 10, 32)
+	if err != nil || id <= 0 {
+		http.Error(w, "id invalido", http.StatusBadRequest)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodDelete:
+		h.Delete(w, r, int32(id))
 	default:
-		http.NotFound(w, r)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
-// POST /workouts - Crear nuevo entrenamiento
 func (h *WorkoutHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "formulario invalido", http.StatusBadRequest)
@@ -80,13 +94,13 @@ func (h *WorkoutHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := validarWorkout(params.ClientID, params.Exercise, params.Sets, params.Repetitions, params.Weight); err != nil {
-		redirectConError(w, r, err.Error())
+		mostrarError(w, r, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
 
 	_, err := h.queries.GetClient(r.Context(), params.ClientID)
 	if err == sql.ErrNoRows {
-		redirectConError(w, r, "no existe el cliente")
+		mostrarError(w, r, http.StatusUnprocessableEntity, "no existe el cliente")
 		return
 	}
 	if err != nil {
@@ -99,36 +113,28 @@ func (h *WorkoutHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	clients, err := h.queries.ListClients(r.Context())
+	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	workouts, err := h.queries.ListWorkouts(r.Context())
+	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	if err := views.WorkoutCreated(workouts, clients).Render(r.Context(), w); err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+	}
 }
 
-// POST /workouts/delete - Eliminar entrenamiento
-func (h *WorkoutHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "formulario invalido", http.StatusBadRequest)
-		return
-	}
-
-	id, err := strconv.ParseInt(r.FormValue("id"), 10, 32)
-	if err != nil {
-		http.Error(w, "id invalido", http.StatusBadRequest)
-		return
-	}
-
-	_, err = h.queries.GetWorkout(r.Context(), int32(id))
-	if err == sql.ErrNoRows {
-		redirectConError(w, r, "entrenamiento no encontrado")
-		return
-	}
-	if err != nil {
+func (h *WorkoutHandler) Delete(w http.ResponseWriter, r *http.Request, id int32) {
+	if err := h.queries.DeleteWorkout(r.Context(), id); err != nil {
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	if err := h.queries.DeleteWorkout(r.Context(), int32(id)); err != nil {
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	w.WriteHeader(http.StatusOK)
 }

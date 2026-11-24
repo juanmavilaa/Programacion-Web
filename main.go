@@ -29,9 +29,9 @@ func main() {
 
 	http.Handle("/", loggingMiddleware(indexHandler))
 	http.Handle("/clients", loggingMiddleware(clientHandler))
-	http.Handle("/clients/delete", loggingMiddleware(clientHandler))
+	http.Handle("/clients/", loggingMiddleware(clientHandler))
 	http.Handle("/workouts", loggingMiddleware(workoutHandler))
-	http.Handle("/workouts/delete", loggingMiddleware(workoutHandler))
+	http.Handle("/workouts/", loggingMiddleware(workoutHandler))
 
 	// archivos estaticos (styles.css)
 	fs := http.FileServer(http.Dir("static"))

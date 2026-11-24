@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"net/http"
-	"net/url"
 
 	db "reps/db/sqlc"
 	"reps/views"
@@ -25,7 +24,6 @@ func (h *IndexHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// GET / - Pagina principal
 func (h *IndexHandler) Index(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -44,14 +42,7 @@ func (h *IndexHandler) Index(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	errorMsg := r.URL.Query().Get("error")
-
-	if err := views.IndexPage(clients, workouts, errorMsg).Render(r.Context(), w); err != nil {
+	if err := views.IndexPage(clients, workouts).Render(r.Context(), w); err != nil {
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 	}
-}
-
-// vuelve a / con el mensaje de error
-func redirectConError(w http.ResponseWriter, r *http.Request, mensaje string) {
-	http.Redirect(w, r, "/?error="+url.QueryEscape(mensaje), http.StatusSeeOther)
 }

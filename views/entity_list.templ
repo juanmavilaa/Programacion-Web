@@ -1,15 +1,16 @@
 package views
 
 import (
+	"fmt"
 	db "reps/db/sqlc"
 	"strconv"
 )
 
 templ ClientList(clients []db.Client) {
-	if len(clients) == 0 {
-		<p>Todavía no hay clientes cargados.</p>
-	} else {
-		<div class="overflow-auto">
+	<div id="client-list" class="overflow-auto">
+		if len(clients) == 0 {
+			<p>Todavía no hay clientes cargados.</p>
+		} else {
 			<table>
 				<thead>
 					<tr>
@@ -24,24 +25,21 @@ templ ClientList(clients []db.Client) {
 							<td>{ client.Name }</td>
 							<td>{ client.Email }</td>
 							<td>
-								<form method="post" action="/clients/delete">
-									<input type="hidden" name="id" value={ strconv.Itoa(int(client.ID)) }/>
-									<button type="submit" class="secondary">Eliminar</button>
-								</form>
+								<button class="secondary" hx-delete={ fmt.Sprintf("/clients/%d", client.ID) } hx-target="closest tr" hx-swap="outerHTML" hx-confirm="¿Borrar este cliente?">Borrar</button>
 							</td>
 						</tr>
 					}
 				</tbody>
 			</table>
-		</div>
-	}
+		}
+	</div>
 }
 
 templ WorkoutList(workouts []db.Workout, clients []db.Client) {
-	if len(workouts) == 0 {
-		<p>Todavía no hay entrenamientos cargados.</p>
-	} else {
-		<div class="overflow-auto">
+	<div id="workout-list" class="overflow-auto">
+		if len(workouts) == 0 {
+			<p>Todavía no hay entrenamientos cargados.</p>
+		} else {
 			<table>
 				<thead>
 					<tr>
@@ -64,15 +62,12 @@ templ WorkoutList(workouts []db.Workout, clients []db.Client) {
 							<td>{ workout.Weight } kg</td>
 							<td>{ workout.CreatedAt.Format("02/01/2006") }</td>
 							<td>
-								<form method="post" action="/workouts/delete">
-									<input type="hidden" name="id" value={ strconv.Itoa(int(workout.ID)) }/>
-									<button type="submit" class="secondary">Eliminar</button>
-								</form>
+								<button class="secondary" hx-delete={ fmt.Sprintf("/workouts/%d", workout.ID) } hx-target="closest tr" hx-swap="outerHTML" hx-confirm="¿Borrar este entrenamiento?">Borrar</button>
 							</td>
 						</tr>
 					}
 				</tbody>
 			</table>
-		</div>
-	}
+		}
+	</div>
 }

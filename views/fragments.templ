@@ -1,0 +1,28 @@
+package views
+
+import db "reps/db/sqlc"
+
+templ ErrorMessage(msg string) {
+	<div id="mensaje" hx-swap-oob="true">
+		<article class="error" role="alert">{ msg }</article>
+	</div>
+}
+
+templ ClientCreated(clients []db.Client) {
+	@ClientList(clients)
+	<div id="client-form" hx-swap-oob="true">
+		@ClientForm()
+	</div>
+	<div id="workout-form" hx-swap-oob="true">
+		@WorkoutForm(clients)
+	</div>
+	<div id="mensaje" hx-swap-oob="true"></div>
+}
+
+templ WorkoutCreated(workouts []db.Workout, clients []db.Client) {
+	@WorkoutList(workouts, clients)
+	<div id="workout-form" hx-swap-oob="true">
+		@WorkoutForm(clients)
+	</div>
+	<div id="mensaje" hx-swap-oob="true"></div>
+}

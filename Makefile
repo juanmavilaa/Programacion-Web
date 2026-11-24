@@ -5,8 +5,7 @@ TEMPL    := go run github.com/a-h/templ/cmd/templ@v0.3.1020
 
 all: build
 
-# Ejecuta las tareas de generacion configuradas por el proyecto
-# (templ va con la misma version que go.mod, el codigo que genera depende de la version)
+# Genera el codigo de sqlc y templ (templ con version fija porque el codigo generado depende de ella)
 generate:
 	@sqlc generate
 	@$(TEMPL) generate
@@ -45,6 +44,6 @@ test: down build db
 	docker compose down -v; \
 	exit $$ok
 
-# Limpia los artefactos de construccion
+# Borra lo que se genera al compilar
 clean: down
 	@rm -rf tmp

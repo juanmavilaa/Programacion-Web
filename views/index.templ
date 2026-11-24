@@ -2,19 +2,21 @@ package views
 
 import db "reps/db/sqlc"
 
-templ IndexPage(clients []db.Client, workouts []db.Workout, errorMsg string) {
+templ IndexPage(clients []db.Client, workouts []db.Workout) {
 	@Layout("Reps") {
-		if errorMsg != "" {
-			<article class="error" role="alert">{ errorMsg }</article>
-		}
+		<div id="mensaje"></div>
 		<section>
 			<h2>Clientes</h2>
-			@ClientForm()
+			<div id="client-form">
+				@ClientForm()
+			</div>
 			@ClientList(clients)
 		</section>
 		<section>
 			<h2>Entrenamientos</h2>
-			@WorkoutForm(clients)
+			<div id="workout-form">
+				@WorkoutForm(clients)
+			</div>
 			@WorkoutList(workouts, clients)
 		</section>
 	}

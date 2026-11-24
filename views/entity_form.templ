@@ -6,7 +6,7 @@ import (
 )
 
 templ ClientForm() {
-	<form method="post" action="/clients">
+	<form hx-post="/clients" hx-target="#client-list" hx-swap="outerHTML">
 		<label for="client-name">Nombre</label>
 		<input type="text" id="client-name" name="name" required/>
 		<label for="client-email">Email</label>
@@ -19,7 +19,7 @@ templ WorkoutForm(clients []db.Client) {
 	if len(clients) == 0 {
 		<p>Para cargar un entrenamiento primero hay que agregar un cliente.</p>
 	} else {
-		<form method="post" action="/workouts">
+		<form hx-post="/workouts" hx-target="#workout-list" hx-swap="outerHTML">
 			<label for="workout-client">Cliente</label>
 			<select id="workout-client" name="client_id" required>
 				for _, client := range clients {

@@ -34,7 +34,7 @@ func ClientForm() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<form method=\"post\" action=\"/clients\"><label for=\"client-name\">Nombre</label> <input type=\"text\" id=\"client-name\" name=\"name\" required> <label for=\"client-email\">Email</label> <input type=\"email\" id=\"client-email\" name=\"email\" required> <button type=\"submit\">Agregar cliente</button></form>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<form hx-post=\"/clients\" hx-target=\"#client-list\" hx-swap=\"outerHTML\"><label for=\"client-name\">Nombre</label> <input type=\"text\" id=\"client-name\" name=\"name\" required> <label for=\"client-email\">Email</label> <input type=\"email\" id=\"client-email\" name=\"email\" required> <button type=\"submit\">Agregar cliente</button></form>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -69,7 +69,7 @@ func WorkoutForm(clients []db.Client) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<form method=\"post\" action=\"/workouts\"><label for=\"workout-client\">Cliente</label> <select id=\"workout-client\" name=\"client_id\" required>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<form hx-post=\"/workouts\" hx-target=\"#workout-list\" hx-swap=\"outerHTML\"><label for=\"workout-client\">Cliente</label> <select id=\"workout-client\" name=\"client_id\" required>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

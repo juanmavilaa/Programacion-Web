@@ -1,8 +1,8 @@
-# Reps - TP5
+# Reps - TP6
 
 Reps es un trackeador de ejercicios de gimnasio que permite registrar clientes y sus entrenamientos.
 
-En este TP se reemplazó el frontend con JavaScript por una aplicación renderizada en el servidor usando templ. Los formularios hacen un POST y el servidor redirige a la página principal (Post/Redirect/Get).
+La aplicación se renderiza en el servidor con templ. En este TP se agregó HTMX para que crear y borrar clientes y entrenamientos actualice solo la parte de la página que cambia, sin recargarla y sin escribir JavaScript.
 
 ## Requisitos
 
@@ -22,16 +22,16 @@ go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
 
 No hace falta instalar templ, el Makefile lo ejecuta con `go run`. La primera vez tarda un poco más porque lo descarga y lo compila.
 
-También se necesita conexión a internet: Pico.css se carga desde un CDN y Go descarga templ (y su propia versión, si hace falta) la primera vez.
+También se necesita conexión a internet: Pico.css y HTMX se cargan desde un CDN y Go descarga templ (y su propia versión, si hace falta) la primera vez.
 
 ## Ejecutar la aplicación
 
-El TP5 se encuentra en la branch `tp5`.
+El TP6 se encuentra en la branch `tp6`.
 
 Después de clonar el repositorio:
 
 ```bash
-git switch tp5
+git switch tp6
 ```
 
 Desde la raíz del proyecto:
@@ -59,6 +59,10 @@ Para detener la aplicación se usa Ctrl+C. Al cortarla se borran los contenedore
 
 Las tablas se crean solas la primera vez que arranca la base, a partir de `db/schema/schema.sql`.
 
+## Uso
+
+En la página principal hay un formulario para agregar clientes y otro para agregar entrenamientos. Al enviarlos se actualiza la tabla correspondiente. Cada fila tiene un botón Borrar que pide confirmación y saca la fila. Si algo no es válido (email repetido, borrar un cliente que tiene entrenamientos, etc.) aparece un mensaje arriba de todo.
+
 ## Tests
 
 Los tests de persistencia se ejecutan con:
@@ -69,7 +73,7 @@ make test
 
 ## Documentación
 
-La documentación de las vistas y de los handlers está en:
+La documentación de las vistas, los handlers y el uso de HTMX está en:
 
 ```text
 docs/vistas.md
